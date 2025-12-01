@@ -1,13 +1,25 @@
 mod cli;
 mod config;
+mod parser;
+mod progress;
+mod stores;
 
 use anyhow::Result;
 use clap::Parser;
+use protoblock::Runner;
+use std::str::FromStr;
+use tokio::runtime::Builder;
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::filter::Directive;
 
 use crate::cli::Cli;
 use crate::config::AppConfig;
+use crate::parser::MhinParser;
+use crate::progress::ProgressReporter;
 
 fn main() -> Result<()> {
+    init_tracing();
+
     let cli = Cli::parse();
     let app_config = AppConfig::load(cli)?;
 
@@ -18,7 +30,8 @@ fn main() -> Result<()> {
     }
     println!("Data directory → {}", app_config.data_dir.display());
 
-    let fetcher = app_config.protoblock.fetcher_config();
+    let fetcher_config = app_config.protoblock.fetcher_config().clone();
+    let fetcher = &fetcher_config;
     println!(
         "Protoblock → rpc_url={}, threads={}",
         fetcher.rpc_url(),
@@ -44,5 +57,33 @@ fn main() -> Result<()> {
         String::from_utf8_lossy(&mhin_config.mhin_prefix)
     );
 
+    let parser = MhinParser::new(app_config)?;
+
+    let runtime = Builder::new_multi_thread().enable_all().build()?;
+    runtime.block_on(async move {
+        let fetcher_for_progress = fetcher_config.clone();
+        let (progress_reporter, progress_handle) =
+            ProgressReporter::start(fetcher_for_progress).await?;
+        let mut parser = parser;
+        parser.attach_progress(progress_handle);
+        let mut runner = Runner::new(fetcher_config, parser);
+        let run_result = runner.run_until_ctrl_c().await;
+        progress_reporter.stop().await;
+        run_result
+    })?;
+
     Ok(())
+}
+
+fn init_tracing() {
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let filter = filter
+        .add_directive(Directive::from_str("protoblock=warn").expect("valid protoblock directive"))
+        .add_directive(Directive::from_str("rollblock=warn").expect("valid rollblock directive"));
+
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_target(true)
+        .with_thread_ids(true)
+        .try_init();
 }

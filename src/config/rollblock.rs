@@ -3,9 +3,7 @@ use std::path::Path;
 use anyhow::{Context, Result, anyhow};
 use rand::{Rng, distr::Alphanumeric};
 use rollblock::{
-    RemoteServerSettings, StoreConfig,
-    metadata::{LmdbMetadataStore, MetadataStore},
-    orchestrator::DurabilityMode,
+    MhinStoreBlockFacade, RemoteServerSettings, StoreConfig, orchestrator::DurabilityMode,
 };
 
 use crate::cli::{
@@ -161,25 +159,24 @@ impl RollblockSettings {
             return Ok(0);
         }
 
-        let metadata_dir = self.store_config.metadata_dir();
-        if !metadata_dir.exists() {
-            return Ok(0);
-        }
+        self.read_start_height_from_store()
+    }
 
-        let metadata = LmdbMetadataStore::new_with_map_size(
-            &metadata_dir,
-            self.store_config.lmdb_map_size.max(1),
-        )
-        .context("failed to open rollblock metadata store")?;
-        let durable_block = metadata
+    fn read_start_height_from_store(&self) -> Result<u64> {
+        let mut peek_config = self.store_config.clone();
+        peek_config.enable_server = false;
+        peek_config.remote_server = None;
+
+        let store = MhinStoreBlockFacade::new(peek_config)
+            .context("failed to open rollblock store to determine start height")?;
+        let current_block = store
             .current_block()
             .context("failed to read rollblock current block height")?;
+        store
+            .close()
+            .context("failed to close rollblock store after determining start height")?;
 
-        if durable_block == 0 {
-            return Ok(0);
-        }
-
-        durable_block.checked_add(1).context(
+        current_block.checked_add(1).context(
             "rollblock current block reached u64::MAX; cannot derive protoblock start height",
         )
     }
