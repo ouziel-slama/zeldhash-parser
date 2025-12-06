@@ -21,8 +21,6 @@ const EMBEDDED_REMOTE_PASSWORD_LEN: usize = 32;
 pub struct RollblockSettings {
     pub mode: RollblockMode,
     pub store_config: StoreConfig,
-    pub remote_username: String,
-    pub remote_password: String,
 }
 
 impl RollblockOptions {
@@ -138,7 +136,7 @@ impl RollblockOptions {
         let remote_username = EMBEDDED_REMOTE_USERNAME.to_string();
         let remote_password = generate_remote_password();
         let remote_settings = RemoteServerSettings::default()
-            .with_basic_auth(remote_username.clone(), remote_password.clone());
+            .with_basic_auth(remote_username, remote_password);
         config = config.with_remote_server(remote_settings);
         config = config
             .enable_remote_server()
@@ -147,8 +145,6 @@ impl RollblockOptions {
         Ok(RollblockSettings {
             mode,
             store_config: config,
-            remote_username,
-            remote_password,
         })
     }
 }
@@ -225,4 +221,24 @@ fn generate_remote_password() -> String {
         .map(|_| rng.sample(Alphanumeric))
         .map(char::from)
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn determine_start_height_is_zero_for_new_store() {
+        let tmp = tempdir().expect("tempdir should be created");
+        let options = RollblockOptions::default();
+        let settings = options.build(tmp.path()).expect("rollblock settings build");
+
+        assert!(matches!(settings.mode, RollblockMode::New));
+
+        let start_height = settings
+            .determine_start_height()
+            .expect("start height should default to 0 for new stores");
+        assert_eq!(start_height, 0);
+    }
 }

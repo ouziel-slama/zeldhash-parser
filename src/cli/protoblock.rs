@@ -64,6 +64,7 @@ pub struct ProtoblockOptions {
         long = "protoblock_rpc_url",
         alias = "protoblock-rpc-url",
         env = "PROTOBLOCK_RPC_URL",
+        global = true,
         value_name = "URL",
         help = HELP_PROTOBLOCK_RPC_URL
     )]
@@ -73,6 +74,7 @@ pub struct ProtoblockOptions {
         long = "protoblock_rpc_user",
         alias = "protoblock-rpc-user",
         env = "PROTOBLOCK_RPC_USER",
+        global = true,
         value_name = "USER",
         help = HELP_PROTOBLOCK_RPC_USER
     )]
@@ -82,6 +84,7 @@ pub struct ProtoblockOptions {
         long = "protoblock_rpc_password",
         alias = "protoblock-rpc-password",
         env = "PROTOBLOCK_RPC_PASSWORD",
+        global = true,
         value_name = "PASSWORD",
         help = HELP_PROTOBLOCK_RPC_PASSWORD
     )]
@@ -92,6 +95,7 @@ pub struct ProtoblockOptions {
         alias = "protoblock-thread-count",
         env = "PROTOBLOCK_THREAD_COUNT",
         id = "protoblock_thread_count",
+        global = true,
         value_name = "COUNT",
         help = HELP_PROTOBLOCK_THREAD_COUNT
     )]
@@ -101,6 +105,7 @@ pub struct ProtoblockOptions {
         long = "protoblock_max_batch_size_mb",
         alias = "protoblock-max-batch-size-mb",
         env = "PROTOBLOCK_MAX_BATCH_MB",
+        global = true,
         value_name = "MEGABYTES",
         help = HELP_PROTOBLOCK_MAX_BATCH_SIZE_MB
     )]
@@ -110,6 +115,7 @@ pub struct ProtoblockOptions {
         long = "protoblock_reorg_window_size",
         alias = "protoblock-reorg-window-size",
         env = "PROTOBLOCK_REORG_WINDOW",
+        global = true,
         value_name = "BLOCKS",
         help = HELP_PROTOBLOCK_REORG_WINDOW_SIZE
     )]
@@ -119,6 +125,7 @@ pub struct ProtoblockOptions {
         long = "protoblock_rpc_timeout",
         alias = "protoblock-rpc-timeout",
         env = "PROTOBLOCK_RPC_TIMEOUT",
+        global = true,
         value_name = "DURATION",
         value_parser = parse_duration,
         help = "Optional. Per RPC timeout; accepts human-friendly durations (e.g. 5s, 2m). [default: 10s]"
@@ -130,6 +137,7 @@ pub struct ProtoblockOptions {
         long = "protoblock_metrics_interval",
         alias = "protoblock-metrics-interval",
         env = "PROTOBLOCK_METRICS_INTERVAL",
+        global = true,
         value_name = "DURATION",
         value_parser = parse_duration,
         help = "Optional. Interval between telemetry snapshots. [default: 5s]"
@@ -141,6 +149,7 @@ pub struct ProtoblockOptions {
         long = "protoblock_queue_max_size_mb",
         alias = "protoblock-queue-max-size-mb",
         env = "PROTOBLOCK_QUEUE_MB",
+        global = true,
         value_name = "MEGABYTES",
         help = "Optional. Maximum megabytes buffered in the ordered queue. [default: 200 MB]"
     )]
@@ -150,6 +159,7 @@ pub struct ProtoblockOptions {
         long = "protoblock_tip_idle_backoff",
         alias = "protoblock-tip-idle-backoff",
         env = "PROTOBLOCK_TIP_IDLE_BACKOFF",
+        global = true,
         value_name = "DURATION",
         value_parser = parse_duration,
         help = "Optional. Backoff between polls once near the blockchain tip. [default: 10s]"
@@ -161,6 +171,7 @@ pub struct ProtoblockOptions {
         long = "protoblock_tip_refresh_interval",
         alias = "protoblock-tip-refresh-interval",
         env = "PROTOBLOCK_TIP_REFRESH_INTERVAL",
+        global = true,
         value_name = "DURATION",
         value_parser = parse_duration,
         help = "Optional. Cadence for refreshing the remote tip height. [default: 10s]"
@@ -172,6 +183,7 @@ pub struct ProtoblockOptions {
         long = "protoblock_rpc_max_request_body_bytes",
         alias = "protoblock-rpc-max-request-body-bytes",
         env = "PROTOBLOCK_RPC_MAX_REQUEST_BODY_BYTES",
+        global = true,
         value_name = "BYTES",
         help = "Optional. Maximum allowed RPC request body size. [default: 10_485_760 bytes]"
     )]
@@ -181,6 +193,7 @@ pub struct ProtoblockOptions {
         long = "protoblock_rpc_max_response_body_bytes",
         alias = "protoblock-rpc-max-response-body-bytes",
         env = "PROTOBLOCK_RPC_MAX_RESPONSE_BODY_BYTES",
+        global = true,
         value_name = "BYTES",
         help = "Optional. Maximum allowed RPC response body size. [default: 10_485_760 bytes]"
     )]

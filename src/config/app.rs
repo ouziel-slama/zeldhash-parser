@@ -11,11 +11,11 @@ use super::overlay::Overlay;
 use super::protoblock::ProtoblockSettings;
 use super::rollblock::RollblockSettings;
 
-const CONFIG_FILE_NAME: &str = "mhinserver.toml";
-const LEGACY_CONFIG_FILES: [&str; 2] = ["mhinserver.toml", "config/mhinserver.toml"];
-const PROJECT_QUALIFIER: &str = "io";
+const CONFIG_FILE_NAME: &str = "mhinparser.toml";
+const LEGACY_CONFIG_FILES: [&str; 2] = ["mhinparser.toml", "config/mhinparser.toml"];
+const PROJECT_QUALIFIER: &str = "org";
 const PROJECT_ORGANIZATION: &str = "myhashisnice";
-const PROJECT_APPLICATION: &str = "mhinserver";
+const PROJECT_APPLICATION: &str = "mhinparser";
 
 /// Fully materialized configuration for the application.
 #[derive(Debug)]
@@ -25,6 +25,7 @@ pub struct AppConfig {
     pub network: mhinprotocol::MhinNetwork,
     pub protoblock: ProtoblockSettings,
     pub rollblock: RollblockSettings,
+    pub runtime: RuntimePaths,
 }
 
 impl AppConfig {
@@ -35,6 +36,7 @@ impl AppConfig {
             protoblock: cli_protoblock,
             data_dir: cli_data_dir,
             rollblock: cli_rollblock,
+            ..
         } = cli;
 
         let (file_config, config_path) = load_file_config(config.as_ref())?;
@@ -50,7 +52,7 @@ impl AppConfig {
             .or_else(default_data_dir_path)
             .ok_or_else(|| {
                 anyhow!(
-                    "data_dir is required (set --data-dir, MHINSERVER_DATA_DIR, or ensure the OS user data directory is available)"
+                    "data_dir is required (set --data-dir, MHINPARSER_DATA_DIR, or ensure the OS user data directory is available)"
                 )
             })?;
 
@@ -66,6 +68,8 @@ impl AppConfig {
             .overlay(cli_protoblock)
             .build(protoblock_start_height)?;
 
+        let runtime = RuntimePaths::prepare(&data_dir)?;
+
         let network = cli_network
             .or(file_network)
             .map(Into::into)
@@ -77,8 +81,34 @@ impl AppConfig {
             network,
             protoblock: protoblock_settings,
             rollblock: rollblock_settings,
+            runtime,
         })
     }
+}
+
+pub fn load_runtime_paths(cli: Cli) -> Result<RuntimePaths> {
+    let Cli {
+        config,
+        data_dir: cli_data_dir,
+        ..
+    } = cli;
+
+    let (file_config, _config_path) = load_file_config(config.as_ref())?;
+    let FileConfig {
+        data_dir: file_data_dir,
+        ..
+    } = file_config;
+
+    let data_dir = cli_data_dir
+        .or(file_data_dir)
+        .or_else(default_data_dir_path)
+        .ok_or_else(|| {
+            anyhow!(
+                "data_dir is required (set --data-dir, MHINPARSER_DATA_DIR, or ensure the OS user data directory is available)"
+            )
+        })?;
+
+    RuntimePaths::prepare(&data_dir)
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -99,11 +129,9 @@ fn load_file_config(path: Option<&PathBuf>) -> Result<(FileConfig, Option<PathBu
         return Ok((config, Some(provided.clone())));
     }
 
-    if let Some(default_path) = default_config_file_path() {
-        if default_path.exists() {
-            let config = read_toml(&default_path)?;
-            return Ok((config, Some(default_path)));
-        }
+    if let Some(default_path) = default_config_file_path().filter(|path| path.exists()) {
+        let config = read_toml(&default_path)?;
+        return Ok((config, Some(default_path)));
     }
 
     for candidate in LEGACY_CONFIG_FILES {
@@ -145,4 +173,54 @@ fn default_config_file_path() -> Option<PathBuf> {
 
 fn default_data_dir_path() -> Option<PathBuf> {
     default_project_dirs().map(|dirs| dirs.data_dir().to_path_buf())
+}
+
+/// Paths used by runtime artifacts such as PID and log files.
+#[derive(Debug, Clone)]
+pub struct RuntimePaths {
+    pid_file: PathBuf,
+    log_file: PathBuf,
+}
+
+impl RuntimePaths {
+    pub fn prepare(data_dir: &Path) -> Result<Self> {
+        let run_dir = data_dir.join("run");
+        let logs_dir = data_dir.join("logs");
+        fs::create_dir_all(&run_dir)
+            .with_context(|| format!("failed to create runtime dir {}", run_dir.display()))?;
+        fs::create_dir_all(&logs_dir)
+            .with_context(|| format!("failed to create logs dir {}", logs_dir.display()))?;
+
+        Ok(Self {
+            pid_file: run_dir.join("mhinparser.pid"),
+            log_file: logs_dir.join("mhinparser.log"),
+        })
+    }
+
+    pub fn pid_file(&self) -> &Path {
+        &self.pid_file
+    }
+
+    pub fn log_file(&self) -> &Path {
+        &self.log_file
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RuntimePaths;
+    use tempfile::TempDir;
+
+    #[test]
+    fn runtime_paths_create_directories() {
+        let temp = TempDir::new().expect("temp dir");
+        let data_dir = temp.path();
+        let runtime = RuntimePaths::prepare(data_dir).expect("runtime paths");
+
+        let pid_dir = runtime.pid_file().parent().expect("pid dir");
+        let log_dir = runtime.log_file().parent().expect("log dir");
+
+        assert!(pid_dir.exists());
+        assert!(log_dir.exists());
+    }
 }

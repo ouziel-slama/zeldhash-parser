@@ -1,5 +1,6 @@
 use crate::config::AppConfig;
 use crate::progress::ProgressHandle;
+use crate::stores::sqlite::{SqliteStore, get_read_write_connection};
 use crate::stores::utxo::UTXOStore;
 use anyhow::{Context, Result};
 use bitcoin::Block;
@@ -15,12 +16,15 @@ use protoblock::{
     },
 };
 use rollblock::MhinStoreBlockFacade;
+use rusqlite::Connection;
+use std::sync::{Arc, Mutex};
 
 /// Parser driving block ingestion for MHIN.
 pub struct MhinParser {
     protocol: MhinProtocol,
     store: UTXOStore,
     progress: Option<ProgressHandle>,
+    sqlite_conn: Arc<Mutex<Connection>>,
 }
 
 impl MhinParser {
@@ -31,15 +35,25 @@ impl MhinParser {
         let store = MhinStoreBlockFacade::new(store_config)
             .context("failed to initialize rollblock store")?;
         let store = UTXOStore::new(store);
+        let sqlite_conn = get_read_write_connection(&app_config.data_dir)
+            .context("failed to open MHIN SQLite store")?;
+        let sqlite_conn = Arc::new(Mutex::new(sqlite_conn));
+        SqliteStore::initialize(&sqlite_conn).context("failed to initialize MHIN SQLite store")?;
         Ok(Self {
             protocol: MhinProtocol::new(mhin_config),
             store,
             progress: None,
+            sqlite_conn,
         })
     }
 
     /// Wires a progress handle so the parser can report processed heights.
     pub fn attach_progress(&mut self, progress: ProgressHandle) {
+        if let Some(stats) = SqliteStore::latest_cumulative() {
+            progress.update_cumulative(Some(&stats));
+            progress.mark_processed(stats.block_index());
+            progress.reset_speed_baseline(stats.block_index());
+        }
         self.progress = Some(progress);
     }
 
@@ -70,16 +84,22 @@ impl BlockProtocol for MhinParser {
                 .map_err(|err| Self::protocol_error(ProtocolStage::Process, err))?;
 
             let pre_processed = data.into_inner();
-            {
+            let processed_block = {
                 let mut store_view = self.store.view();
-                let _ = self.protocol.process_block(&pre_processed, &mut store_view);
-            }
+                self.protocol.process_block(&pre_processed, &mut store_view)
+            };
 
             self.store
                 .end_block()
                 .map_err(|err| Self::protocol_error(ProtocolStage::Process, err))?;
 
+            let sqlite_store = SqliteStore::new(Arc::clone(&self.sqlite_conn));
+            let cumul_stats = sqlite_store
+                .save_block(height, &processed_block)
+                .map_err(|err| Self::protocol_error(ProtocolStage::Process, err))?;
+
             if let Some(handle) = &self.progress {
+                handle.update_cumulative(Some(&cumul_stats));
                 handle.mark_processed(height);
             }
 
@@ -93,7 +113,13 @@ impl BlockProtocol for MhinParser {
                 .rollback(block_height)
                 .map_err(|err| Self::protocol_error(ProtocolStage::Rollback, err))?;
 
+            let sqlite_store = SqliteStore::new(Arc::clone(&self.sqlite_conn));
+            let latest_cumul = sqlite_store
+                .rollback(block_height)
+                .map_err(|err| Self::protocol_error(ProtocolStage::Rollback, err))?;
+
             if let Some(handle) = &self.progress {
+                handle.update_cumulative(latest_cumul.as_ref());
                 handle.rollback_to(block_height.saturating_sub(1));
             }
 

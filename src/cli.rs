@@ -3,7 +3,7 @@ mod duration;
 mod protoblock;
 mod rollblock;
 
-pub use args::{Cli, MhinNetworkArg};
+pub use args::{Cli, Command, MhinNetworkArg};
 pub use duration::parse_duration;
 pub use protoblock::{
     DEFAULT_PROTOBLOCK_MAX_BATCH_SIZE_MB, DEFAULT_PROTOBLOCK_REORG_WINDOW_SIZE,

@@ -141,6 +141,7 @@ pub struct RollblockOptions {
         long = "rollblock_shards_count",
         alias = "rollblock-shards-count",
         env = "ROLLBLOCK_SHARDS",
+        global = true,
         value_name = "COUNT",
         help = HELP_ROLLBLOCK_SHARDS_COUNT
     )]
@@ -150,6 +151,7 @@ pub struct RollblockOptions {
         long = "rollblock_initial_capacity",
         alias = "rollblock-initial-capacity",
         env = "ROLLBLOCK_INITIAL_CAPACITY",
+        global = true,
         value_name = "ENTRIES",
         help = HELP_ROLLBLOCK_INITIAL_CAPACITY
     )]
@@ -160,6 +162,7 @@ pub struct RollblockOptions {
         alias = "rollblock-thread-count",
         env = "ROLLBLOCK_THREAD_COUNT",
         id = "rollblock_thread_count",
+        global = true,
         value_name = "COUNT",
         help = HELP_ROLLBLOCK_THREAD_COUNT
     )]
@@ -169,6 +172,7 @@ pub struct RollblockOptions {
         long = "rollblock_compress_journal",
         alias = "rollblock-compress-journal",
         env = "ROLLBLOCK_COMPRESS_JOURNAL",
+        global = true,
         value_name = "BOOL",
         value_parser = BoolishValueParser::new(),
         help = HELP_ROLLBLOCK_COMPRESS_JOURNAL
@@ -179,6 +183,7 @@ pub struct RollblockOptions {
         long = "rollblock_snapshot_interval",
         alias = "rollblock-snapshot-interval",
         env = "ROLLBLOCK_SNAPSHOT_INTERVAL",
+        global = true,
         value_name = "DURATION",
         value_parser = parse_duration,
         help = "Optional. Frequency of automatic snapshots."
@@ -190,6 +195,7 @@ pub struct RollblockOptions {
         long = "rollblock_max_snapshot_interval",
         alias = "rollblock-max-snapshot-interval",
         env = "ROLLBLOCK_MAX_SNAPSHOT_INTERVAL",
+        global = true,
         value_name = "DURATION",
         value_parser = parse_duration,
         help = "Optional. Maximum tolerated lag between snapshots."
@@ -201,6 +207,7 @@ pub struct RollblockOptions {
         long = "rollblock_journal_compression_level",
         alias = "rollblock-journal-compression-level",
         env = "ROLLBLOCK_JOURNAL_COMPRESSION_LEVEL",
+        global = true,
         value_name = "LEVEL",
         help = "Optional. zstd compression level when compression is enabled."
     )]
@@ -210,6 +217,7 @@ pub struct RollblockOptions {
         long = "rollblock_journal_chunk_size_bytes",
         alias = "rollblock-journal-chunk-size-bytes",
         env = "ROLLBLOCK_JOURNAL_CHUNK_SIZE",
+        global = true,
         value_name = "BYTES",
         help = "Optional. Maximum on-disk size for a single journal chunk."
     )]
@@ -219,6 +227,7 @@ pub struct RollblockOptions {
         long = "rollblock_lmdb_map_size",
         alias = "rollblock-lmdb-map-size",
         env = "ROLLBLOCK_LMDB_MAP_SIZE",
+        global = true,
         value_name = "BYTES",
         help = "Optional. LMDB map size (metadata database upper bound)."
     )]
@@ -228,6 +237,7 @@ pub struct RollblockOptions {
         long = "rollblock_min_rollback_window",
         alias = "rollblock-min-rollback-window",
         env = "ROLLBLOCK_MIN_ROLLBACK_WINDOW",
+        global = true,
         value_name = "BLOCKS",
         help = "Optional. Minimum number of blocks retained for rollback."
     )]
@@ -237,6 +247,7 @@ pub struct RollblockOptions {
         long = "rollblock_prune_interval",
         alias = "rollblock-prune-interval",
         env = "ROLLBLOCK_PRUNE_INTERVAL",
+        global = true,
         value_name = "DURATION",
         value_parser = parse_duration,
         help = "Optional. Interval between background pruning passes."
@@ -248,6 +259,7 @@ pub struct RollblockOptions {
         long = "rollblock_bootstrap_block_profile",
         alias = "rollblock-bootstrap-block-profile",
         env = "ROLLBLOCK_BOOTSTRAP_BLOCK_PROFILE",
+        global = true,
         value_name = "BLOCKS",
         help = "Optional. Estimated blocks per journal chunk before history accumulates."
     )]
@@ -257,6 +269,7 @@ pub struct RollblockOptions {
         long = "rollblock_durability_mode",
         alias = "rollblock-durability-mode",
         env = "ROLLBLOCK_DURABILITY_MODE",
+        global = true,
         value_enum,
         value_name = "MODE",
         help = HELP_ROLLBLOCK_DURABILITY_MODE
@@ -267,6 +280,7 @@ pub struct RollblockOptions {
         long = "rollblock_async_max_pending_blocks",
         alias = "rollblock-async-max-pending-blocks",
         env = "ROLLBLOCK_ASYNC_MAX_PENDING_BLOCKS",
+        global = true,
         value_name = "BLOCKS",
         help = HELP_ROLLBLOCK_ASYNC_MAX_PENDING_BLOCKS
     )]
@@ -276,6 +290,7 @@ pub struct RollblockOptions {
         long = "rollblock_async_relaxed_sync_every",
         alias = "rollblock-async-relaxed-sync-every",
         env = "ROLLBLOCK_ASYNC_RELAXED_SYNC_EVERY",
+        global = true,
         value_name = "BLOCKS",
         help = HELP_ROLLBLOCK_ASYNC_RELAXED_SYNC_EVERY
     )]
@@ -285,6 +300,7 @@ pub struct RollblockOptions {
         long = "rollblock_synchronous_relaxed_sync_every",
         alias = "rollblock-synchronous-relaxed-sync-every",
         env = "ROLLBLOCK_SYNCHRONOUS_RELAXED_SYNC_EVERY",
+        global = true,
         value_name = "BLOCKS",
         help = HELP_ROLLBLOCK_SYNCHRONOUS_RELAXED_SYNC_EVERY
     )]
