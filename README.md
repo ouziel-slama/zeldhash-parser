@@ -7,7 +7,7 @@
 [![Crates.io](https://img.shields.io/crates/v/mhinparser.svg)](https://crates.io/crates/mhinparser)
 [![Docs.rs](https://docs.rs/mhinparser/badge.svg)](https://docs.rs/mhinparser)
 
-A high-performance Bitcoin blockchain parser implementing the **My Hash Is Nice** protocol.
+A high-performance Bitcoin blockchain parser implementing the **[My Hash Is Nice](https://myhashisnice.org/)** protocol.
 
 Built on [`mhinprotocol`](https://crates.io/crates/mhinprotocol), this parser leverages [`protoblock`](https://crates.io/crates/protoblock) for blazing-fast block fetching and [`rollblock`](https://crates.io/crates/rollblock) for efficient UTXO management with instant rollback support.
 
