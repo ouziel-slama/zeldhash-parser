@@ -55,6 +55,8 @@ Configuration can be provided via CLI flags, environment variables, or a TOML fi
 
 Default config location: `~/.config/myhashisnice/mhinparser/mhinparser.toml`
 
+Example configuration with production-optimized values (defaults are more conservative):
+
 ```toml
 # Network: mainnet, testnet4, signet, regtest
 network = "mainnet"
@@ -66,16 +68,16 @@ data_dir = "/path/to/data"
 rpc_url = "http://127.0.0.1:8332"
 rpc_user = "bitcoin"
 rpc_password = "password"
-thread_count = 8
-max_batch_size_mb = 256
+thread_count = 8              # default: 4
+max_batch_size_mb = 256       # default: 10
 
 [rollblock]
-user = "mhin"       # change this in production
-password = "mhin"   # change this in production
-port = 9443         # default port
+user = "mhin"                 # change this in production
+password = "mhin"             # change this in production
+port = 9443
 shards_count = 16
 thread_count = 4
-initial_capacity = 100_000_000
+initial_capacity = 100_000_000  # default: 5_000_000
 ```
 
 The embedded rollblock server binds to `127.0.0.1` with basic authentication. By default it uses the `mhin`/`mhin` credentials on port `9443`; change these via `--rollblock_user`, `--rollblock_password`, and `--rollblock_port`. The parser emits a startup warning when the defaults are still in use.
@@ -121,7 +123,7 @@ Options:
 
 ## Requirements
 
-- Rust 2021 edition
+- Rust 1.75+ (2021 edition)
 - Bitcoin Core node with RPC enabled
 - ~50GB+ disk space for mainnet UTXO set
 
@@ -173,7 +175,7 @@ fn compute_utxo_key(txid: &Txid, vout: u32) -> [u8; 8] {
 }
 ```
 
-**Value format:** The UTXO balance (satoshis + MHIN reward) stored as a little-endian `u64`.
+**Value format:** The MHIN UTXO balance stored as a little-endian `u64`.
 
 **Example: Read UTXO balances with rollblock client**
 

@@ -11,7 +11,7 @@ use super::{ProtoblockOptions, RollblockOptions};
     name = "mhinparser",
     author,
     version,
-    about = "MyHashIsNice parser and API server"
+    about = "MyHashIsNice parser and daemon"
 )]
 pub struct Cli {
     /// Path to the optional TOML configuration file.
@@ -82,7 +82,7 @@ pub enum MhinNetworkArg {
 /// High-level commands supported by the CLI.
 #[derive(Subcommand, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
-    /// Start the parser and API server (default when no subcommand is provided).
+    /// Start the parser (default when no subcommand is provided).
     #[command(alias = "start")]
     Run,
     /// Stop the background daemon by reading the PID file and sending a signal.
