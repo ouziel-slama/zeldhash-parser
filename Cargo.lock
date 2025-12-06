@@ -1314,7 +1314,7 @@ dependencies = [
 
 [[package]]
 name = "mhinparser"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitcoin",
@@ -1704,9 +1704,9 @@ dependencies = [
 
 [[package]]
 name = "rollblock"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06c511d44ab5b0d46bbfaafe09b5c833858baf5ec8ce68cb61fde8a637751afa"
+checksum = "efe23bdca8e8288f5efe19f1fafd3c5ad688afcfb6dcd5a91a5ff742331986c4"
 dependencies = [
  "base64 0.22.1",
  "bincode",
