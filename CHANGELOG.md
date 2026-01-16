@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-01-16
+
+### Added
+
+- Added `address` column to `rewards` table to store Bitcoin addresses for reward outputs
+- Automatic migration for existing databases via `ensure_rewards_address_column()`
+
+### Changed
+
+- Bumped `zeldhash-protocol` to 0.6.0
+- Refactored UTXO store to use signed `Balance` type (i64) instead of unsigned `Amount` (u64)
+- Spent UTXOs are now marked with negative balance tombstones instead of being deleted
+
+### Removed
+
+- Removed `ZeldStore::pop()` method in favor of negative balance tombstones
+
+### Notes
+
+- **Full reparse required**: This version requires a complete reparse of the blockchain due to UTXO storage model changes
+
 ## [0.4.0] - 2025-01-10
 
 ### Changed
@@ -71,6 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TOML configuration file support
 - CLI with environment variable overrides
 
+[0.5.0]: https://github.com/ouziel-slama/zeldhash-parser/releases/tag/v0.5.0
 [0.4.0]: https://github.com/ouziel-slama/zeldhash-parser/releases/tag/v0.4.0
 [0.3.1]: https://github.com/ouziel-slama/zeldhash-parser/releases/tag/v0.3.1
 [0.3.0]: https://github.com/ouziel-slama/zeldhash-parser/releases/tag/v0.3.0

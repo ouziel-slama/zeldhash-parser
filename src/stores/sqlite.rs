@@ -62,6 +62,7 @@ impl SqliteStore {
             .context("failed to start SQLite transaction for ensure_schema")?;
 
         queries::create_rewards_table(&tx)?;
+        queries::ensure_rewards_address_column(&tx)?;
         queries::create_stats_table(&tx)?;
         queries::create_rewards_block_index_index(&tx)?;
         queries::create_rewards_txid_index(&tx)?;
@@ -109,7 +110,15 @@ impl SqliteStore {
             let zero_count = i64::from(reward.zero_count);
             let reward_value = to_sql_i64(reward.reward, "reward")?;
             let txid = reward.txid.to_string();
-            queries::insert_reward(&tx, block_index_sql, &txid, vout, zero_count, reward_value)?;
+            queries::insert_reward(
+                &tx,
+                block_index_sql,
+                &txid,
+                vout,
+                zero_count,
+                reward_value,
+                reward.address.as_deref(),
+            )?;
         }
 
         let block_stats = BlockStats::from_processed(block_index, block);
@@ -566,6 +575,7 @@ mod tests {
             vout: 0,
             zero_count: 5,
             reward: 10,
+            address: Some("bc1qtest".to_string()),
         }];
         let block = ProcessedZeldBlock {
             rewards,
@@ -718,6 +728,7 @@ mod tests {
                 vout: 0,
                 zero_count: 3,
                 reward: 100,
+                address: Some("bc1qblock0".to_string()),
             }],
             total_reward: 100,
             max_zero_count: 3,
@@ -737,6 +748,7 @@ mod tests {
                 vout: 1,
                 zero_count: 4,
                 reward: 50,
+                address: None,
             }],
             total_reward: 50,
             max_zero_count: 4,

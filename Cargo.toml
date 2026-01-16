@@ -1,6 +1,6 @@
 [package]
 name = "zeldhash-parser"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 rust-version = "1.83"
 license = "MIT OR Apache-2.0"
@@ -23,7 +23,7 @@ humantime-serde = "1.1.1"
 libc = "0.2.178"
 protoblock = "0.1.6"
 rollblock = { version = "0.4.1", features = ["key-12"] }
-zeldhash-protocol = "0.5.0"
+zeldhash-protocol = "0.6.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 rusqlite = { version = "0.37.0", features = ["bundled"] }

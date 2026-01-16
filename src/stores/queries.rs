@@ -15,12 +15,31 @@ pub fn create_rewards_table(tx: &Transaction<'_>) -> Result<()> {
             vout INTEGER NOT NULL,
             zero_count INTEGER NOT NULL,
             reward INTEGER NOT NULL,
+            address TEXT,
             PRIMARY KEY (block_index, txid, vout)
         )
         "#,
         [],
     )
     .context("failed to ensure rewards table")?;
+    Ok(())
+}
+
+/// Ensures the `address` column exists on the `rewards` table for migrations.
+pub fn ensure_rewards_address_column(tx: &Transaction<'_>) -> Result<()> {
+    let has_address: Option<i64> = tx
+        .query_row(
+            "SELECT 1 FROM pragma_table_info('rewards') WHERE name = 'address' LIMIT 1",
+            [],
+            |row| row.get(0),
+        )
+        .optional()
+        .context("failed to inspect rewards table schema")?;
+
+    if has_address.is_none() {
+        tx.execute("ALTER TABLE rewards ADD COLUMN address TEXT", [])
+            .context("failed to add rewards.address column")?;
+    }
     Ok(())
 }
 
@@ -98,10 +117,11 @@ pub fn insert_reward(
     vout: i64,
     zero_count: i64,
     reward: i64,
+    address: Option<&str>,
 ) -> Result<()> {
     tx.execute(
-        "INSERT INTO rewards (block_index, txid, vout, zero_count, reward) VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![block_index, txid, vout, zero_count, reward],
+        "INSERT INTO rewards (block_index, txid, vout, zero_count, reward, address) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![block_index, txid, vout, zero_count, reward, address],
     )
     .with_context(|| {
         format!(
@@ -151,6 +171,7 @@ mod tests {
             .expect("transaction creation should succeed");
 
         create_rewards_table(&tx).expect("create rewards");
+        ensure_rewards_address_column(&tx).expect("ensure address column");
         create_stats_table(&tx).expect("create stats");
         create_rewards_block_index_index(&tx).expect("create index");
         create_rewards_txid_index(&tx).expect("create txid index");
@@ -197,6 +218,40 @@ mod tests {
         assert_eq!(index_exists, 1);
         assert_eq!(txid_index_exists, 1);
         assert_eq!(zero_count_index_exists, 1);
+    }
+
+    #[test]
+    fn ensure_rewards_address_column_adds_missing_column() {
+        let mut conn = Connection::open_in_memory().expect("in-memory db");
+        let tx = conn
+            .transaction()
+            .expect("transaction creation should succeed");
+        tx.execute(
+            r#"
+            CREATE TABLE rewards (
+                block_index INTEGER NOT NULL,
+                txid TEXT NOT NULL,
+                vout INTEGER NOT NULL,
+                zero_count INTEGER NOT NULL,
+                reward INTEGER NOT NULL,
+                PRIMARY KEY (block_index, txid, vout)
+            )
+            "#,
+            [],
+        )
+        .expect("create legacy rewards");
+
+        ensure_rewards_address_column(&tx).expect("add address column");
+
+        let has_address: Option<i64> = tx
+            .query_row(
+                "SELECT 1 FROM pragma_table_info('rewards') WHERE name = 'address' LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .optional()
+            .expect("query pragma");
+        assert!(has_address.is_some());
     }
 
     #[test]
@@ -275,23 +330,44 @@ mod tests {
             .expect("transaction creation should succeed");
         create_rewards_table(&tx).expect("create rewards");
 
-        insert_reward(&tx, 100, "txid123", 0, 5, 1000).expect("insert reward");
+        insert_reward(&tx, 100, "txid123", 0, 5, 1000, Some("bc1qtest")).expect("insert reward");
 
         let count: i64 = tx
             .query_row("SELECT count(*) FROM rewards", [], |row| row.get(0))
             .expect("rewards count");
         assert_eq!(count, 1);
 
-        let (txid, zero_count, reward): (String, i64, i64) = tx
+        let (txid, zero_count, reward, address): (String, i64, i64, Option<String>) = tx
             .query_row(
-                "SELECT txid, zero_count, reward FROM rewards WHERE block_index = 100",
+                "SELECT txid, zero_count, reward, address FROM rewards WHERE block_index = 100",
                 [],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
             )
             .expect("fetch reward");
         assert_eq!(txid, "txid123");
         assert_eq!(zero_count, 5);
         assert_eq!(reward, 1000);
+        assert_eq!(address.as_deref(), Some("bc1qtest"));
+    }
+
+    #[test]
+    fn insert_reward_with_no_address() {
+        let mut conn = Connection::open_in_memory().expect("in-memory db");
+        let tx = conn
+            .transaction()
+            .expect("transaction creation should succeed");
+        create_rewards_table(&tx).expect("create rewards");
+
+        insert_reward(&tx, 101, "txid456", 1, 3, 500, None).expect("insert reward");
+
+        let address: Option<String> = tx
+            .query_row(
+                "SELECT address FROM rewards WHERE block_index = 101",
+                [],
+                |row| row.get(0),
+            )
+            .expect("fetch address");
+        assert!(address.is_none());
     }
 
     #[test]

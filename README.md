@@ -140,6 +140,7 @@ CREATE TABLE rewards (
     vout INTEGER NOT NULL,
     zero_count INTEGER NOT NULL,
     reward INTEGER NOT NULL,
+    address TEXT,                -- Bitcoin address (NULL for non-standard scripts)
     PRIMARY KEY (block_index, txid, vout)
 );
 
@@ -155,7 +156,7 @@ CREATE TABLE stats (
 
 ```bash
 sqlite3 /path/to/data/zeldstats.sqlite3 \
-  "SELECT txid, zero_count, reward FROM rewards WHERE block_index = 870000;"
+  "SELECT txid, zero_count, reward, address FROM rewards WHERE block_index = 870000;"
 ```
 
 ### Rollblock UTXO Store

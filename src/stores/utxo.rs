@@ -9,7 +9,7 @@ use rollblock::types::{Operation as StoreOperation, StoreKey, Value as StoreValu
 use rollblock::BlockStoreFacade;
 use zeldhash_protocol::{
     store::ZeldStore,
-    types::{Amount, UtxoKey},
+    types::{Balance, UtxoKey},
 };
 
 /// Owns the rollblock facade and hands out lightweight store views as needed.
@@ -54,22 +54,30 @@ impl UTXOStoreView<'_> {
         StoreKey::from_prefix(*key)
     }
 
-    fn decode_value(&self, key: &UtxoKey, value: StoreValue) -> Amount {
+    fn decode_value(&self, key: &UtxoKey, value: StoreValue) -> Balance {
         if value.is_delete() {
             return 0;
         }
 
-        value.to_u64().unwrap_or_else(|| {
+        let bytes: &[u8] = value.as_ref();
+        if bytes.len() > 8 {
             panic!(
-                "invalid rollblock value for key {key:?}: rollblock value exceeds 64-bit width ({} bytes)",
-                value.len()
-            )
-        })
+                "invalid rollblock value for key {key:?}: expected up to 8 bytes, got {}",
+                bytes.len()
+            );
+        }
+        let mut buf = [0u8; 8];
+        buf[..bytes.len()].copy_from_slice(bytes);
+        Balance::from_le_bytes(buf)
+    }
+
+    fn encode_balance(value: Balance) -> StoreValue {
+        StoreValue::from_le_bytes(value.to_le_bytes())
     }
 }
 
 impl ZeldStore for UTXOStoreView<'_> {
-    fn get(&mut self, key: &UtxoKey) -> Amount {
+    fn get(&mut self, key: &UtxoKey) -> Balance {
         let store_key = Self::to_store_key(key);
         let value = self.facade.get(store_key).unwrap_or_else(|err| {
             // Panic intentionally: rollblock read failures signal critical data corruption that must be investigated by an operator.
@@ -78,20 +86,11 @@ impl ZeldStore for UTXOStoreView<'_> {
         self.decode_value(key, value)
     }
 
-    fn pop(&mut self, key: &UtxoKey) -> Amount {
-        let store_key = Self::to_store_key(key);
-        let value = self.facade.pop(store_key).unwrap_or_else(|err| {
-            // Panic intentionally: rollblock read failures signal critical data corruption that must be investigated by an operator.
-            panic!("rollblock pop failed for key {key:?}: {err}");
-        });
-        self.decode_value(key, value)
-    }
-
-    fn set(&mut self, key: UtxoKey, value: Amount) {
+    fn set(&mut self, key: UtxoKey, value: Balance) {
         let store_key = Self::to_store_key(&key);
         if let Err(err) = self.facade.set(StoreOperation {
             key: store_key,
-            value: StoreValue::from(value),
+            value: Self::encode_balance(value),
         }) {
             // Panic intentionally: write failures mean the backing store is inconsistent and requires manual operator intervention.
             panic!("rollblock set failed: {err}");
@@ -128,19 +127,30 @@ mod tests {
         // An empty StoreValue represents a deleted/missing key
         let empty_value = StoreValue::from_vec(Vec::new());
         let key: UtxoKey = [0u8; 12];
-        let amount = view.decode_value(&key, empty_value);
-        assert_eq!(amount, 0);
+        let balance = view.decode_value(&key, empty_value);
+        assert_eq!(balance, 0);
     }
 
     #[test]
-    fn utxo_store_view_decodes_u64_value() {
+    fn utxo_store_view_decodes_positive_balance() {
         let temp = TempDir::new().expect("temp dir");
         let store = create_test_store(&temp);
         let view = store.view();
         let key: UtxoKey = [1u8; 12];
-        let value = StoreValue::from(42u64);
-        let amount = view.decode_value(&key, value);
-        assert_eq!(amount, 42);
+        let value = UTXOStoreView::encode_balance(42);
+        let balance = view.decode_value(&key, value);
+        assert_eq!(balance, 42);
+    }
+
+    #[test]
+    fn utxo_store_view_decodes_negative_balance() {
+        let temp = TempDir::new().expect("temp dir");
+        let store = create_test_store(&temp);
+        let view = store.view();
+        let key: UtxoKey = [1u8; 12];
+        let value = UTXOStoreView::encode_balance(-50);
+        let balance = view.decode_value(&key, value);
+        assert_eq!(balance, -50);
     }
 
     #[test]
@@ -169,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn utxo_store_pop_returns_and_removes_value() {
+    fn utxo_store_spent_balance_becomes_negative() {
         let temp = TempDir::new().expect("temp dir");
         let store = create_test_store(&temp);
 
@@ -181,20 +191,23 @@ mod tests {
         }
         store.end_block().expect("end block");
 
-        store.start_block(1).expect("start pop block");
+        // Spend the UTXO by setting a negative tombstone
+        store.start_block(1).expect("start spend block");
         {
             let mut view = store.view();
-            let amount = view.pop(&key);
-            assert_eq!(amount, 200);
+            let balance = view.get(&key);
+            assert_eq!(balance, 200);
+            // Mark as spent with negative tombstone
+            view.set(key, -balance);
         }
-        store.end_block().expect("end pop block");
+        store.end_block().expect("end spend block");
 
-        // After pop, the value should be zero (deleted)
+        // After spending, the value should be negative
         store.start_block(2).expect("start verify block");
         {
             let mut view = store.view();
-            let amount = view.get(&key);
-            assert_eq!(amount, 0);
+            let balance = view.get(&key);
+            assert_eq!(balance, -200);
         }
         store.end_block().expect("end verify block");
     }

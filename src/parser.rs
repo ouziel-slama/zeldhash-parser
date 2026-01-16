@@ -205,6 +205,7 @@ mod tests {
                 reward: 1,
                 distribution: 0,
                 vout: i as u32,
+                address: None,
             })
             .collect();
 
@@ -359,6 +360,7 @@ mod tests {
                 reward: 10,
                 distribution: 0,
                 vout: 0,
+                address: None,
             }],
             zero_count: 1,
             reward: 10,
