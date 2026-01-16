@@ -67,6 +67,7 @@ impl SqliteStore {
         queries::create_rewards_block_index_index(&tx)?;
         queries::create_rewards_txid_index(&tx)?;
         queries::create_rewards_zero_count_index(&tx)?;
+        queries::create_rewards_address_index(&tx)?;
 
         tx.commit()
             .context("failed to commit SQLite transaction for ensure_schema")?;
@@ -691,6 +692,13 @@ mod tests {
                 |_| Ok(true),
             )
             .unwrap_or(false);
+        let rewards_address_exists: bool = guard
+            .query_row(
+                "SELECT 1 FROM sqlite_master WHERE type='index' AND name='rewards_address_idx'",
+                [],
+                |_| Ok(true),
+            )
+            .unwrap_or(false);
 
         assert!(rewards_exists, "rewards table should exist");
         assert!(stats_exists, "stats table should exist");
@@ -703,6 +711,7 @@ mod tests {
             rewards_zero_count_exists,
             "rewards zero_count index should exist"
         );
+        assert!(rewards_address_exists, "rewards address index should exist");
     }
 
     #[test]

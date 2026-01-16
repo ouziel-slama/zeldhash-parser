@@ -89,6 +89,16 @@ pub fn create_rewards_zero_count_index(tx: &Transaction<'_>) -> Result<()> {
     Ok(())
 }
 
+/// Creates an index on `rewards(address)` for fast lookups by address.
+pub fn create_rewards_address_index(tx: &Transaction<'_>) -> Result<()> {
+    tx.execute(
+        "CREATE INDEX IF NOT EXISTS rewards_address_idx ON rewards(address)",
+        [],
+    )
+    .context("failed to ensure rewards address index")?;
+    Ok(())
+}
+
 /// Deletes all reward rows with `block_index > threshold`.
 pub fn delete_rewards_after_block(tx: &Transaction<'_>, block_index: i64) -> Result<()> {
     tx.execute(
@@ -176,6 +186,7 @@ mod tests {
         create_rewards_block_index_index(&tx).expect("create index");
         create_rewards_txid_index(&tx).expect("create txid index");
         create_rewards_zero_count_index(&tx).expect("create zero_count index");
+        create_rewards_address_index(&tx).expect("create address index");
 
         let rewards_exists: i64 = tx
             .query_row(
@@ -212,12 +223,20 @@ mod tests {
                 |row| row.get(0),
             )
             .expect("zero_count index query");
+        let address_index_exists: i64 = tx
+            .query_row(
+                "SELECT count(*) FROM sqlite_master WHERE type='index' AND name='rewards_address_idx'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("address index query");
 
         assert_eq!(rewards_exists, 1);
         assert_eq!(stats_exists, 1);
         assert_eq!(index_exists, 1);
         assert_eq!(txid_index_exists, 1);
         assert_eq!(zero_count_index_exists, 1);
+        assert_eq!(address_index_exists, 1);
     }
 
     #[test]
